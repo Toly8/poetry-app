@@ -1,56 +1,352 @@
 let db;
 
-const request = indexedDB.open("PoetryDB", 1);
+const API_BASE_URL = "https://example.com/api/poems";
+const DB_NAME = "PoetryDB";
+const DB_VERSION = 2;
+const POEMS_STORE = "poems";
+const OUTBOX_STORE = "outbox";
 
-request.onupgradeneeded = e => {
-  db = e.target.result;
-  db.createObjectStore("poems", { autoIncrement: true });
+const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+request.onupgradeneeded = event => {
+  db = event.target.result;
+
+  if (!db.objectStoreNames.contains(POEMS_STORE)) {
+    db.createObjectStore(POEMS_STORE, { keyPath: "id", autoIncrement: true });
+  }
+
+  if (!db.objectStoreNames.contains(OUTBOX_STORE)) {
+    db.createObjectStore(OUTBOX_STORE, { keyPath: "id", autoIncrement: true });
+  }
 };
 
-request.onsuccess = e => {
-  db = e.target.result;
-  loadPoems();
+request.onsuccess = event => {
+  db = event.target.result;
+  updateConnectionStatus();
+  initPage();
+  syncOutbox();
 };
+
+request.onerror = () => {
+  console.error("Не удалось открыть базу данных");
+};
+
+function initPage() {
+  const page = document.body.dataset.page;
+
+  if (page === "create") {
+    const saveButton = document.getElementById("save-poem");
+    if (saveButton) {
+      saveButton.addEventListener("click", savePoem);
+    }
+  }
+
+  if (page === "collection") {
+    const search = document.getElementById("search");
+    if (search) {
+      search.addEventListener("input", loadCollection);
+    }
+    loadCollection();
+  }
+}
 
 function savePoem() {
-  const title = document.getElementById("title").value;
-  const poem = document.getElementById("poem").value;
+  const titleInput = document.getElementById("title");
+  const poemInput = document.getElementById("poem");
 
-  if (!title || !poem) return;
+  if (!titleInput || !poemInput || !db) {
+    return;
+  }
 
-  const tx = db.transaction("poems", "readwrite");
-  tx.objectStore("poems").add({ title, poem });
+  const title = titleInput.value.trim();
+  const poem = poemInput.value.trim();
+
+  if (!title || !poem) {
+    return;
+  }
+
+  const poemRecord = { title, poem, updatedAt: Date.now() };
+
+  const tx = db.transaction([POEMS_STORE, OUTBOX_STORE], "readwrite");
+  const poemsStore = tx.objectStore(POEMS_STORE);
+  const outboxStore = tx.objectStore(OUTBOX_STORE);
+
+  const addPoemRequest = poemsStore.add(poemRecord);
+
+  addPoemRequest.onsuccess = event => {
+    outboxStore.add({
+      type: "add",
+      localId: event.target.result,
+      payload: poemRecord,
+      createdAt: Date.now()
+    });
+  };
 
   tx.oncomplete = () => {
-    document.getElementById("title").value = "";
-    document.getElementById("poem").value = "";
-    loadPoems();
+    titleInput.value = "";
+    poemInput.value = "";
+    syncOutbox();
   };
 }
 
-function loadPoems() {
+async function loadCollection() {
+  if (!db) {
+    return;
+  }
+
   const container = document.getElementById("poems");
+  if (!container) {
+    return;
+  }
+
+  const search = document.getElementById("search");
+  const query = (search?.value || "").trim().toLowerCase();
+
+  const poems = await getAllPoems();
+  const filtered = poems
+    .filter(item => {
+      if (!query) {
+        return true;
+      }
+      return item.title.toLowerCase().includes(query) || item.poem.toLowerCase().includes(query);
+    })
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  renderCollection(container, filtered, query);
+}
+
+function renderCollection(container, poems, query) {
   container.innerHTML = "";
 
-  const tx = db.transaction("poems", "readonly");
-  const store = tx.objectStore("poems");
+  if (!poems.length) {
+    container.innerHTML = query
+      ? "<p class=\"empty\">Ничего не найдено по вашему запросу.</p>"
+      : "<p class=\"empty\">✨ Пока пусто. Добавьте первое стихотворение на вкладке «Добавить».</p>";
+    return;
+  }
 
-  store.openCursor().onsuccess = e => {
-    const cursor = e.target.result;
-    if (cursor) {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <h3>${cursor.value.title}</h3>
-        <pre>${cursor.value.poem}</pre>
-        <hr>
-      `;
-      container.appendChild(div);
-      cursor.continue();
-    }
+  poems.forEach(item => {
+    const card = document.createElement("article");
+    card.className = "poem-card";
+    card.innerHTML = `
+      <div class="card-head">
+        <h3>${escapeHtml(item.title)}</h3>
+      </div>
+      <pre>${escapeHtml(item.poem)}</pre>
+      <div class="card-actions">
+        <button class="secondary" onclick="startEditPoem(${item.id})">Редактировать</button>
+        <button class="danger" onclick="deletePoem(${item.id})">Удалить</button>
+      </div>
+      <form id="edit-form-${item.id}" class="edit-form hidden" onsubmit="submitEdit(event, ${item.id})">
+        <label class="input-group">
+          <span>Название</span>
+          <input id="edit-title-${item.id}" value="${escapeAttribute(item.title)}" required>
+        </label>
+        <label class="input-group">
+          <span>Текст</span>
+          <textarea id="edit-poem-${item.id}" required>${escapeHtml(item.poem)}</textarea>
+        </label>
+        <div class="card-actions">
+          <button class="primary" type="submit">Сохранить изменения</button>
+          <button class="ghost" type="button" onclick="cancelEditPoem(${item.id})">Отмена</button>
+        </div>
+      </form>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function startEditPoem(id) {
+  const form = document.getElementById(`edit-form-${id}`);
+  if (form) {
+    form.classList.remove("hidden");
+  }
+}
+
+function cancelEditPoem(id) {
+  const form = document.getElementById(`edit-form-${id}`);
+  if (form) {
+    form.classList.add("hidden");
+  }
+}
+
+function submitEdit(event, id) {
+  event.preventDefault();
+
+  const titleInput = document.getElementById(`edit-title-${id}`);
+  const poemInput = document.getElementById(`edit-poem-${id}`);
+
+  if (!titleInput || !poemInput || !db) {
+    return;
+  }
+
+  const title = titleInput.value.trim();
+  const poem = poemInput.value.trim();
+
+  if (!title || !poem) {
+    return;
+  }
+
+  const tx = db.transaction([POEMS_STORE, OUTBOX_STORE], "readwrite");
+  tx.objectStore(POEMS_STORE).put({ id, title, poem, updatedAt: Date.now() });
+  tx.objectStore(OUTBOX_STORE).add({
+    type: "update",
+    localId: id,
+    payload: { title, poem, updatedAt: Date.now() },
+    createdAt: Date.now()
+  });
+
+  tx.oncomplete = () => {
+    loadCollection();
+    syncOutbox();
   };
 }
 
-/* офлайн */
+function deletePoem(id) {
+  if (!db) {
+    return;
+  }
+
+  const tx = db.transaction([POEMS_STORE, OUTBOX_STORE], "readwrite");
+  tx.objectStore(POEMS_STORE).delete(id);
+  tx.objectStore(OUTBOX_STORE).add({
+    type: "delete",
+    localId: id,
+    createdAt: Date.now()
+  });
+
+  tx.oncomplete = () => {
+    loadCollection();
+    syncOutbox();
+  };
+}
+
+function getAllPoems() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(POEMS_STORE, "readonly");
+    const store = tx.objectStore(POEMS_STORE);
+    const poems = [];
+
+    store.openCursor().onsuccess = event => {
+      const cursor = event.target.result;
+      if (cursor) {
+        poems.push({ ...cursor.value, id: cursor.primaryKey });
+        cursor.continue();
+        return;
+      }
+      resolve(poems);
+    };
+
+    tx.onerror = () => reject(new Error("Не удалось загрузить коллекцию"));
+  });
+}
+
+function syncOutbox() {
+  if (!db || !navigator.onLine) {
+    return;
+  }
+
+  const tx = db.transaction(OUTBOX_STORE, "readonly");
+  const store = tx.objectStore(OUTBOX_STORE);
+  const operations = [];
+
+  store.openCursor().onsuccess = event => {
+    const cursor = event.target.result;
+    if (cursor) {
+      operations.push({ ...cursor.value, id: cursor.primaryKey });
+      cursor.continue();
+      return;
+    }
+
+    operations.sort((a, b) => a.createdAt - b.createdAt);
+    processQueueSequentially(operations);
+  };
+}
+
+async function processQueueSequentially(operations) {
+  for (const operation of operations) {
+    try {
+      if (operation.type === "add") {
+        await fetch(API_BASE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ localId: operation.localId, ...operation.payload })
+        });
+      }
+
+      if (operation.type === "update") {
+        await fetch(`${API_BASE_URL}/${operation.localId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(operation.payload)
+        });
+      }
+
+      if (operation.type === "delete") {
+        await fetch(`${API_BASE_URL}/${operation.localId}`, { method: "DELETE" });
+      }
+
+      await removeOutboxOperation(operation.id);
+    } catch {
+      break;
+    }
+  }
+}
+
+function removeOutboxOperation(operationId) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(OUTBOX_STORE, "readwrite");
+    const req = tx.objectStore(OUTBOX_STORE).delete(operationId);
+
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(new Error("Не удалось удалить событие из outbox"));
+  });
+}
+
+function updateConnectionStatus() {
+  const status = document.getElementById("status");
+
+  if (!status) {
+    return;
+  }
+
+  if (navigator.onLine) {
+    status.textContent = "🟢 Онлайн: синхронизация включена";
+    status.classList.add("online");
+    status.classList.remove("offline");
+    return;
+  }
+
+  status.textContent = "🟡 Оффлайн: изменения будут отправлены позже";
+  status.classList.add("offline");
+  status.classList.remove("online");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("`", "&#096;");
+}
+
+window.addEventListener("online", () => {
+  updateConnectionStatus();
+  syncOutbox();
+});
+
+window.addEventListener("offline", updateConnectionStatus);
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
 }
+
+window.startEditPoem = startEditPoem;
+window.cancelEditPoem = cancelEditPoem;
+window.submitEdit = submitEdit;
+window.deletePoem = deletePoem;

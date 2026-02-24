@@ -8,32 +8,26 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#6c63ff">
-<title>Мои стихи — Добавить</title>
+<title>Мои стихи — Коллекция</title>
 </head>
-<body data-page="create">
+<body data-page="collection">
   <main class="app-shell">
     <header class="app-header">
       <p class="eyebrow">Poetry App</p>
-      <h1>Добавить стихотворение</h1>
+      <h1>Моя коллекция</h1>
       <p id="status" class="status" aria-live="polite"></p>
       <nav class="tabs" aria-label="Навигация">
-        <a class="tab active" href="index.html">Добавить</a>
-        <a class="tab" href="collection.html">Моя коллекция</a>
+        <a class="tab" href="index.html">Добавить</a>
+        <a class="tab active" href="collection.html">Моя коллекция</a>
       </nav>
     </header>
 
-    <section class="composer" aria-label="Форма добавления">
+    <section class="library">
       <label class="input-group">
-        <span>Название</span>
-        <input id="title" placeholder="Например: Ночной ветер">
+        <span>Поиск по названию и тексту</span>
+        <input id="search" placeholder="Введите слово или фразу">
       </label>
-
-      <label class="input-group">
-        <span>Текст</span>
-        <textarea id="poem" placeholder="Напишите ваше стихотворение..."></textarea>
-      </label>
-
-      <button id="save-poem" class="primary" type="button">Сохранить</button>
+      <div id="poems"></div>
     </section>
   </main>
 <script src="app.js"></script>

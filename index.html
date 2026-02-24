@@ -2,30 +2,40 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
-
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
-<title>Мои стихи</title>
+<meta name="theme-color" content="#6c63ff">
+<title>Мои стихи — Добавить</title>
 </head>
+<body data-page="create" data-theme="light">
+  <main class="app-shell">
+    <header class="app-header">
+      <p class="eyebrow">Poetry App</p>
+      <h1>Добавить стихотворение</h1>
+      <p id="status" class="status" aria-live="polite"></p>
+      <nav class="tabs" aria-label="Навигация">
+        <a class="tab active" href="index.html">Добавить</a>
+        <a class="tab" href="collection.html">Моя коллекция</a>
+      </nav>
+    </header>
 
-<body>
+    <section class="composer" aria-label="Форма добавления">
+      <label class="input-group">
+        <span>Название</span>
+        <input id="title" placeholder="Например: Ночной ветер">
+      </label>
 
-<h1>📖 Мои стихи</h1>
+      <label class="input-group">
+        <span>Текст</span>
+        <textarea id="poem" placeholder="Напишите ваше стихотворение..."></textarea>
+      </label>
 
-<input id="title" placeholder="Название стихотворения">
-<textarea id="poem" placeholder="Текст..."></textarea>
-
-<button onclick="savePoem()">Сохранить</button>
-
-<hr>
-
-<div id="poems"></div>
-
+      <button id="save-poem" class="primary" type="button">Сохранить</button>
+    </section>
+  </main>
 <script src="app.js"></script>
 </body>
 </html>

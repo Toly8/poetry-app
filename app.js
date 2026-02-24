@@ -212,7 +212,7 @@ function getPoemPreview(poemText) {
 
   const fullNormalized = lines.join("\n");
   const previewNormalized = previewLines.join("\n");
-  const isTruncated = lines.length > 3 || source.length > previewText.length || fullNormalized.length > previewNormalized.length;
+  const isTruncated = lines.length > 3 || fullNormalized.length > previewNormalized.length;
 
   if (isTruncated && previewText) {
     previewText = `${previewText}...`;
@@ -334,21 +334,14 @@ function renderCollection(container, poems, query) {
         ${authorLine}
       </div>
       <div class="preview-block">
-        <p class="preview-label">Краткий фрагмент (предпросмотр)</p>
+        <p class="preview-label">Краткий фрагмент</p>
         <pre class="preview-text">${preview}</pre>
         ${isTruncated ? '<p class="ellipsis-hint">Есть продолжение...</p>' : ''}
       </div>
       <div class="preview-divider"></div>
-      <button class="read-more-btn primary" type="button" onclick="event.stopPropagation(); openPoemReader(${item.id})">📖 Читать полностью</button>
+      <button class="read-more-btn primary" type="button" onclick="openPoemReader(${item.id})">Читать полностью</button>
       ${actionsMarkup}
     `;
-
-    card.addEventListener("click", event => {
-      if (event.target.closest("button") || event.target.closest("form") || event.target.closest("input") || event.target.closest("textarea")) {
-        return;
-      }
-      openPoemReader(item.id);
-    });
 
     container.appendChild(card);
   });
@@ -467,6 +460,22 @@ function syncOutbox() {
     operations.sort((a, b) => a.createdAt - b.createdAt);
     processQueueSequentially(operations);
   };
+
+  body.style.setProperty("--reader-font-size", `${uiSettings.fontSize}px`);
+  body.style.setProperty("--reader-font-family", familyMap[uiSettings.fontFamily] || familyMap.system);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("`", "&#096;");
 }
 
 async function processQueueSequentially(operations) {
@@ -561,20 +570,6 @@ function applySettings() {
 
   body.style.setProperty("--reader-font-size", `${uiSettings.fontSize}px`);
   body.style.setProperty("--reader-font-family", familyMap[uiSettings.fontFamily] || familyMap.system);
-
-  updateReaderPreview();
-}
-
-
-
-function updateReaderPreview() {
-  const preview = document.getElementById("reader-preview-text");
-  if (!preview) {
-    return;
-  }
-
-  preview.style.fontFamily = getComputedStyle(document.body).getPropertyValue("--reader-font-family");
-  preview.style.fontSize = getComputedStyle(document.body).getPropertyValue("--reader-font-size");
 }
 
 function escapeHtml(value) {

@@ -112,7 +112,7 @@ button.danger:active { background: var(--danger-press); }
 
 #poems { display: grid; gap: 12px; }
 .poem-card { background: var(--surface-strong); border: 1px solid var(--line); border-radius: 16px; padding: 14px; box-shadow: 0 4px 16px rgba(83, 84, 165, 0.08); animation: fadeUp .28s ease both; }
-.preview-card { cursor: default; transition: transform .2s ease, box-shadow .2s ease; }
+.preview-card { cursor: pointer; transition: transform .2s ease, box-shadow .2s ease; }
 .preview-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(83,84,165,.14); }
 .card-head { margin-bottom: 8px; }
 .poem-card h3 { font-size: calc(var(--reader-font-size) + 2px); font-family: var(--reader-font-family); }
@@ -148,7 +148,7 @@ button.danger:active { background: var(--danger-press); }
 }
 
 .preview-divider {
-  margin: 10px 0 8px;
+  margin: 10px 0 2px;
   height: 1px;
   background: var(--line);
 }
@@ -156,17 +156,6 @@ button.danger:active { background: var(--danger-press); }
 .read-more-btn {
   width: 100%;
 }
-
-.read-more-btn {
-  margin-top: 2px;
-  box-shadow: 0 6px 16px rgba(108, 99, 255, 0.28);
-}
-
-.read-more-btn::after {
-  content: " Открыть на весь экран";
-  font-weight: 500;
-}
-
 
 .card-actions { margin-top: 12px; display: flex; gap: 8px; }
 .card-actions button { flex: 1; }
@@ -218,3 +207,35 @@ body.readonly-mode .edit-form { display: none !important; }
   from { transform: translateY(6px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+input:focus, textarea:focus, select:focus { outline: 2px solid rgba(108, 99, 255, 0.23); border-color: var(--accent); }
+textarea { min-height: 180px; resize: vertical; }
+
+button { border: 0; border-radius: 14px; padding: 12px 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
+button.primary { color: #fff; background: linear-gradient(180deg, #7a72ff, var(--accent)); }
+button.primary:active { background: var(--accent-press); }
+button.secondary { color: var(--text); background: color-mix(in srgb, var(--surface-strong) 88%, #a7acff 12%); }
+button.ghost { color: var(--muted); background: color-mix(in srgb, var(--surface-strong) 94%, #a7acff 6%); }
+button.danger { color: #fff; background: var(--danger); }
+button.danger:active { background: var(--danger-press); }
+
+#poems { display: grid; gap: 12px; }
+.poem-card { background: var(--surface-strong); border: 1px solid var(--line); border-radius: 16px; padding: 14px; box-shadow: 0 4px 16px rgba(83, 84, 165, 0.08); }
+.card-head { margin-bottom: 8px; }
+.poem-card h3 { font-size: calc(var(--reader-font-size) + 2px); font-family: var(--reader-font-family); }
+.poem-author { margin-top: 4px; font-size: 13px; color: var(--muted); font-weight: 500; }
+.poem-card pre { margin: 0; white-space: pre-wrap; font-family: var(--reader-font-family); font-size: var(--reader-font-size); line-height: 1.6; color: var(--text); }
+
+.card-actions { margin-top: 12px; display: flex; gap: 8px; }
+.card-actions button { flex: 1; }
+
+.edit-form { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); display: grid; gap: 10px; }
+.hidden { display: none; }
+.empty { text-align: center; color: var(--muted); padding: 22px 16px; background: var(--surface-strong); border-radius: 14px; border: 1px dashed var(--line); }
+
+body.reading-mode .app-header { position: sticky; top: 0; z-index: 3; }
+body.reading-mode .library > .input-group,
+body.reading-mode .library > .helper { display: none; }
+body.reading-mode .poem-card { padding: 18px; }
+
+body.readonly-mode .card-actions,
+body.readonly-mode .edit-form { display: none !important; }

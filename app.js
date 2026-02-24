@@ -205,9 +205,20 @@ function closeReaderOverlay() {
 }
 
 function getPoemPreview(poemText) {
-  const lines = poemText.split("\n").map(line => line.trim()).filter(Boolean);
+  const source = String(poemText || "").trim();
+  const lines = source.split("\n").map(line => line.trim()).filter(Boolean);
   const previewLines = lines.slice(0, 3);
-  return previewLines.join("\n");
+  let previewText = previewLines.join("\n");
+
+  const fullNormalized = lines.join("\n");
+  const previewNormalized = previewLines.join("\n");
+  const isTruncated = lines.length > 3 || fullNormalized.length > previewNormalized.length;
+
+  if (isTruncated && previewText) {
+    previewText = `${previewText}...`;
+  }
+
+  return { previewText, isTruncated };
 }
 
 function savePoem() {
@@ -287,7 +298,8 @@ function renderCollection(container, poems, query) {
 
   poems.forEach(item => {
     const authorLine = item.author ? `<p class="poem-author">${escapeHtml(item.author)}</p>` : "";
-    const preview = escapeHtml(getPoemPreview(item.poem));
+    const { previewText, isTruncated } = getPoemPreview(item.poem);
+    const preview = escapeHtml(previewText);
     const actionsMarkup = uiSettings.readonlyMode
       ? ""
       : `
@@ -321,18 +333,26 @@ function renderCollection(container, poems, query) {
         <h3>${escapeHtml(item.title)}</h3>
         ${authorLine}
       </div>
-      <pre class="preview-text">${preview}</pre>
-      <p class="open-hint">Нажмите, чтобы читать полностью</p>
+      <div class="preview-block">
+        <p class="preview-label">Краткий фрагмент</p>
+        <pre class="preview-text">${preview}</pre>
+        ${isTruncated ? '<p class="ellipsis-hint">Есть продолжение...</p>' : ''}
+      </div>
+      <div class="preview-divider"></div>
+      <button class="read-more-btn primary" type="button" onclick="openPoemReader(${item.id})">Читать полностью</button>
       ${actionsMarkup}
     `;
 
-    card.addEventListener("click", () => {
-      if (!card.querySelector(".edit-form:not(.hidden)")) {
-        openReaderOverlay(item);
-      }
-    });
-
     container.appendChild(card);
+  });
+}
+
+function openPoemReader(id) {
+  getAllPoems().then(poems => {
+    const poem = poems.find(item => item.id === id);
+    if (poem) {
+      openReaderOverlay(poem);
+    }
   });
 }
 
@@ -440,6 +460,22 @@ function syncOutbox() {
     operations.sort((a, b) => a.createdAt - b.createdAt);
     processQueueSequentially(operations);
   };
+
+  body.style.setProperty("--reader-font-size", `${uiSettings.fontSize}px`);
+  body.style.setProperty("--reader-font-family", familyMap[uiSettings.fontFamily] || familyMap.system);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("`", "&#096;");
 }
 
 async function processQueueSequentially(operations) {
@@ -564,3 +600,4 @@ window.startEditPoem = startEditPoem;
 window.cancelEditPoem = cancelEditPoem;
 window.submitEdit = submitEdit;
 window.deletePoem = deletePoem;
+window.openPoemReader = openPoemReader;

@@ -460,6 +460,22 @@ function syncOutbox() {
     operations.sort((a, b) => a.createdAt - b.createdAt);
     processQueueSequentially(operations);
   };
+
+  body.style.setProperty("--reader-font-size", `${uiSettings.fontSize}px`);
+  body.style.setProperty("--reader-font-family", familyMap[uiSettings.fontFamily] || familyMap.system);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("`", "&#096;");
 }
 
 async function processQueueSequentially(operations) {

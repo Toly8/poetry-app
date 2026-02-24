@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#6c63ff">
+<title>Мои стихи — Режим чтения</title>
+</head>
+<body data-page="reader" data-theme="light">
+  <main class="app-shell">
+    <header class="app-header">
+      <p class="eyebrow">Poetry App</p>
+      <h1>Режим чтения</h1>
+      <p id="status" class="status" aria-live="polite"></p>
+      <nav class="tabs" aria-label="Навигация">
+        <a class="tab" href="index.html">Добавить</a>
+        <a class="tab" href="collection.html">Коллекция</a>
+        <a class="tab active" href="reader.html">Чтение</a>
+      </nav>
+    </header>
+
+    <section class="reader-tools">
+      <h2>Настройки чтения</h2>
+      <p class="helper">Настройки применяются к странице коллекции и сохраняются на устройстве.</p>
+      <div class="tool-row">
+        <button id="font-decrease" class="secondary" type="button">A−</button>
+        <button id="font-increase" class="secondary" type="button">A+</button>
+        <select id="font-family" aria-label="Семейство шрифта">
+          <option value="system">Системный</option>
+          <option value="serif">Serif</option>
+          <option value="mono">Mono</option>
+        </select>
+      </div>
+      <div class="tool-row toggles">
+        <label><input id="reading-mode" type="checkbox"> Комфортный режим чтения</label>
+        <label><input id="readonly-mode" type="checkbox"> Только чтение (скрыть кнопки)</label>
+        <label><input id="dark-theme" type="checkbox"> Тёмная тема</label>
+      </div>
+    </section>
+
+    <section class="library">
+      <h2>Предпросмотр</h2>
+      <article class="poem-card">
+        <div class="card-head">
+          <h3>Ночной ветер</h3>
+          <p class="poem-author">Анна Петрова</p>
+        </div>
+        <pre>Тихо шепчет листва у окна,
+Словно музыка в сердце слышна.</pre>
+      </article>
+    </section>
+  </main>
+<script src="app.js"></script>
+</body>
+</html>

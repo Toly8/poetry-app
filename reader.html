@@ -25,33 +25,46 @@
 
     <section class="reader-tools">
       <h2>Настройки чтения</h2>
-      <p class="helper">Настройки применяются к странице коллекции и сохраняются на устройстве.</p>
+      <p class="helper">Используйте ползунки ниже — изменения сразу применяются в коллекции.</p>
+
       <div class="tool-row">
-        <button id="font-decrease" class="secondary" type="button">A−</button>
-        <button id="font-increase" class="secondary" type="button">A+</button>
+        <button id="font-decrease" class="secondary" type="button">Уменьшить текст</button>
+        <button id="font-increase" class="secondary" type="button">Увеличить текст</button>
         <select id="font-family" aria-label="Семейство шрифта">
-          <option value="system">Системный</option>
-          <option value="serif">Serif</option>
-          <option value="mono">Mono</option>
+          <option value="system">Системный шрифт</option>
+          <option value="serif">Классический serif</option>
+          <option value="mono">Моноширинный</option>
         </select>
       </div>
-      <div class="tool-row toggles">
-        <label><input id="reading-mode" type="checkbox"> Комфортный режим чтения</label>
-        <label><input id="readonly-mode" type="checkbox"> Только чтение (скрыть кнопки)</label>
-        <label><input id="dark-theme" type="checkbox"> Тёмная тема</label>
-      </div>
-    </section>
 
-    <section class="library">
-      <h2>Предпросмотр</h2>
-      <article class="poem-card">
-        <div class="card-head">
-          <h3>Ночной ветер</h3>
-          <p class="poem-author">Анна Петрова</p>
-        </div>
-        <pre>Тихо шепчет листва у окна,
-Словно музыка в сердце слышна.</pre>
-      </article>
+      <div class="switch-list">
+        <label class="switch-item">
+          <span>
+            <strong>Комфортный режим чтения</strong>
+            <small>Скрывает лишние элементы в коллекции.</small>
+          </span>
+          <input id="reading-mode" type="checkbox">
+          <span class="switch-slider" aria-hidden="true"></span>
+        </label>
+
+        <label class="switch-item">
+          <span>
+            <strong>Только чтение</strong>
+            <small>Убирает кнопки редактирования и удаления.</small>
+          </span>
+          <input id="readonly-mode" type="checkbox">
+          <span class="switch-slider" aria-hidden="true"></span>
+        </label>
+
+        <label class="switch-item">
+          <span>
+            <strong>Тёмная тема</strong>
+            <small>Для чтения при слабом освещении.</small>
+          </span>
+          <input id="dark-theme" type="checkbox">
+          <span class="switch-slider" aria-hidden="true"></span>
+        </label>
+      </div>
     </section>
   </main>
 <script src="app.js"></script>

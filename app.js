@@ -15,6 +15,7 @@ const defaultSettings = {
 };
 
 let uiSettings = { ...defaultSettings };
+let readerOverlayState = { open: false, startX: null };
 
 const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -52,6 +53,7 @@ function initPage() {
 
   if (page === "collection") {
     document.getElementById("search")?.addEventListener("input", loadCollection);
+    setupReaderOverlay();
     loadCollection();
   }
 
@@ -115,6 +117,110 @@ function setupReaderControls() {
   }
 }
 
+function setupReaderOverlay() {
+  const overlay = document.getElementById("reader-overlay");
+  const sheet = document.getElementById("reader-sheet");
+  const closeButton = document.getElementById("reader-close");
+  const top = document.getElementById("reader-top");
+
+  if (!overlay || !sheet || !closeButton || !top) {
+    return;
+  }
+
+  closeButton.addEventListener("click", () => {
+    if (!closeButton.disabled) {
+      closeReaderOverlay();
+    }
+  });
+
+  sheet.addEventListener("scroll", () => {
+    const atTop = sheet.scrollTop < 8;
+    closeButton.disabled = !atTop;
+    top.classList.toggle("is-hidden", sheet.scrollTop > 60);
+  });
+
+  sheet.addEventListener("touchstart", event => {
+    readerOverlayState.startX = event.changedTouches[0].clientX;
+  }, { passive: true });
+
+  sheet.addEventListener("touchend", event => {
+    const startX = readerOverlayState.startX;
+    if (typeof startX !== "number") {
+      return;
+    }
+
+    const endX = event.changedTouches[0].clientX;
+    const deltaX = endX - startX;
+
+    if (deltaX > 90) {
+      closeReaderOverlay();
+    }
+
+    readerOverlayState.startX = null;
+  }, { passive: true });
+}
+
+function openReaderOverlay(poem) {
+  const overlay = document.getElementById("reader-overlay");
+  const sheet = document.getElementById("reader-sheet");
+  const title = document.getElementById("reader-title");
+  const author = document.getElementById("reader-author");
+  const content = document.getElementById("reader-content");
+  const closeButton = document.getElementById("reader-close");
+  const top = document.getElementById("reader-top");
+
+  if (!overlay || !sheet || !title || !author || !content || !closeButton || !top) {
+    return;
+  }
+
+  title.textContent = poem.title;
+  author.textContent = poem.author || "Без автора";
+  content.innerHTML = `<pre>${escapeHtml(poem.poem)}</pre>`;
+
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("reader-open");
+  sheet.scrollTop = 0;
+  top.classList.remove("is-hidden");
+  closeButton.disabled = false;
+  readerOverlayState.open = true;
+
+  requestAnimationFrame(() => overlay.classList.add("is-visible"));
+}
+
+function closeReaderOverlay() {
+  const overlay = document.getElementById("reader-overlay");
+  if (!overlay || !readerOverlayState.open) {
+    return;
+  }
+
+  overlay.classList.remove("is-visible");
+  overlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("reader-open");
+  readerOverlayState.open = false;
+
+  setTimeout(() => {
+    overlay.classList.add("hidden");
+  }, 220);
+}
+
+function getPoemPreview(poemText) {
+  const source = String(poemText || "").trim();
+  const lines = source.split("\n").map(line => line.trim()).filter(Boolean);
+  const previewLines = lines.slice(0, 3);
+  let previewText = previewLines.join("\n");
+
+  const fullNormalized = lines.join("\n");
+  const previewNormalized = previewLines.join("\n");
+  const isTruncated = lines.length > 3 || fullNormalized.length > previewNormalized.length;
+
+  if (isTruncated && previewText) {
+    previewText = `${previewText}...`;
+  }
+
+  return { previewText, isTruncated };
+}
+
 function savePoem() {
   const titleInput = document.getElementById("title");
   const authorInput = document.getElementById("author");
@@ -133,7 +239,6 @@ function savePoem() {
   }
 
   const poemRecord = { title, author, poem, updatedAt: Date.now() };
-
   const tx = db.transaction([POEMS_STORE, OUTBOX_STORE], "readwrite");
   const addPoemRequest = tx.objectStore(POEMS_STORE).add(poemRecord);
 
@@ -193,12 +298,14 @@ function renderCollection(container, poems, query) {
 
   poems.forEach(item => {
     const authorLine = item.author ? `<p class="poem-author">${escapeHtml(item.author)}</p>` : "";
+    const { previewText, isTruncated } = getPoemPreview(item.poem);
+    const preview = escapeHtml(previewText);
     const actionsMarkup = uiSettings.readonlyMode
       ? ""
       : `
       <div class="card-actions">
-        <button class="secondary" onclick="startEditPoem(${item.id})">Редактировать</button>
-        <button class="danger" onclick="deletePoem(${item.id})">Удалить</button>
+        <button class="secondary" onclick="event.stopPropagation(); startEditPoem(${item.id})">Редактировать</button>
+        <button class="danger" onclick="event.stopPropagation(); deletePoem(${item.id})">Удалить</button>
       </div>
       <form id="edit-form-${item.id}" class="edit-form hidden" onsubmit="submitEdit(event, ${item.id})">
         <label class="input-group">
@@ -215,22 +322,37 @@ function renderCollection(container, poems, query) {
         </label>
         <div class="card-actions">
           <button class="primary" type="submit">Сохранить изменения</button>
-          <button class="ghost" type="button" onclick="cancelEditPoem(${item.id})">Отмена</button>
+          <button class="ghost" type="button" onclick="event.stopPropagation(); cancelEditPoem(${item.id})">Отмена</button>
         </div>
       </form>`;
 
     const card = document.createElement("article");
-    card.className = "poem-card";
+    card.className = "poem-card preview-card";
     card.innerHTML = `
       <div class="card-head">
         <h3>${escapeHtml(item.title)}</h3>
         ${authorLine}
       </div>
-      <pre>${escapeHtml(item.poem)}</pre>
+      <div class="preview-block">
+        <p class="preview-label">Краткий фрагмент</p>
+        <pre class="preview-text">${preview}</pre>
+        ${isTruncated ? '<p class="ellipsis-hint">Есть продолжение...</p>' : ''}
+      </div>
+      <div class="preview-divider"></div>
+      <button class="read-more-btn primary" type="button" onclick="openPoemReader(${item.id})">Читать полностью</button>
       ${actionsMarkup}
     `;
 
     container.appendChild(card);
+  });
+}
+
+function openPoemReader(id) {
+  getAllPoems().then(poems => {
+    const poem = poems.find(item => item.id === id);
+    if (poem) {
+      openReaderOverlay(poem);
+    }
   });
 }
 
@@ -244,6 +366,7 @@ function cancelEditPoem(id) {
 
 function submitEdit(event, id) {
   event.preventDefault();
+  event.stopPropagation();
 
   const titleInput = document.getElementById(`edit-title-${id}`);
   const authorInput = document.getElementById(`edit-author-${id}`);
@@ -337,6 +460,22 @@ function syncOutbox() {
     operations.sort((a, b) => a.createdAt - b.createdAt);
     processQueueSequentially(operations);
   };
+
+  body.style.setProperty("--reader-font-size", `${uiSettings.fontSize}px`);
+  body.style.setProperty("--reader-font-family", familyMap[uiSettings.fontFamily] || familyMap.system);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("`", "&#096;");
 }
 
 async function processQueueSequentially(operations) {
@@ -461,3 +600,4 @@ window.startEditPoem = startEditPoem;
 window.cancelEditPoem = cancelEditPoem;
 window.submitEdit = submitEdit;
 window.deletePoem = deletePoem;
+window.openPoemReader = openPoemReader;

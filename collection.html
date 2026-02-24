@@ -28,10 +28,22 @@
         <span>Поиск по названию, автору и тексту</span>
         <input id="search" placeholder="Введите слово или фразу">
       </label>
-      <p class="helper">Нужен другой размер текста или тёмная тема? Откройте вкладку «Чтение».</p>
+      <p class="helper">Нажмите на карточку, чтобы открыть стихотворение на весь экран.</p>
       <div id="poems"></div>
     </section>
   </main>
+
+  <aside id="reader-overlay" class="reader-overlay hidden" aria-hidden="true">
+    <article id="reader-sheet" class="reader-sheet">
+      <header id="reader-top" class="reader-top">
+        <h2 id="reader-title"></h2>
+        <p id="reader-author" class="poem-author"></p>
+        <button id="reader-close" class="ghost" type="button" disabled>Свернуть</button>
+      </header>
+      <div id="reader-content" class="reader-content"></div>
+    </article>
+  </aside>
+
 <script src="app.js"></script>
 </body>
 </html>

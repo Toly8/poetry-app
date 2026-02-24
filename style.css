@@ -1,0 +1,35 @@
+body {
+  font-family: -apple-system, system-ui;
+  padding: 20px;
+  background: #f2f2f7;
+}
+
+h1 {
+  text-align: center;
+}
+
+input, textarea {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+textarea {
+  height: 160px;
+}
+
+button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  font-size: 16px;
+  background: black;
+  color: white;
+  border: none;
+  border-radius: 10px;
+}
+
+pre {
+  white-space: pre-wrap;
+}

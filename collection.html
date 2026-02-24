@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#6c63ff">
 <title>Мои стихи — Коллекция</title>
 </head>
-<body data-page="collection">
+<body data-page="collection" data-theme="light">
   <main class="app-shell">
     <header class="app-header">
       <p class="eyebrow">Poetry App</p>
@@ -21,6 +21,24 @@
         <a class="tab active" href="collection.html">Моя коллекция</a>
       </nav>
     </header>
+
+    <section class="reader-tools">
+      <h2>Режим чтения</h2>
+      <div class="tool-row">
+        <button id="font-decrease" class="secondary" type="button">A−</button>
+        <button id="font-increase" class="secondary" type="button">A+</button>
+        <select id="font-family" aria-label="Семейство шрифта">
+          <option value="system">Системный</option>
+          <option value="serif">Serif</option>
+          <option value="mono">Mono</option>
+        </select>
+      </div>
+      <div class="tool-row toggles">
+        <label><input id="reading-mode" type="checkbox"> Режим чтения</label>
+        <label><input id="readonly-mode" type="checkbox"> Только чтение (без кнопок)</label>
+        <label><input id="dark-theme" type="checkbox"> Тёмная тема</label>
+      </div>
+    </section>
 
     <section class="library">
       <label class="input-group">

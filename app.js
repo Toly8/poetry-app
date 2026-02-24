@@ -6,6 +6,16 @@ const DB_VERSION = 2;
 const POEMS_STORE = "poems";
 const OUTBOX_STORE = "outbox";
 
+const defaultSettings = {
+  fontSize: 18,
+  fontFamily: "system",
+  readingMode: false,
+  readonlyMode: false,
+  darkTheme: false
+};
+
+let uiSettings = { ...defaultSettings };
+
 const request = indexedDB.open(DB_NAME, DB_VERSION);
 
 request.onupgradeneeded = event => {
@@ -22,6 +32,8 @@ request.onupgradeneeded = event => {
 
 request.onsuccess = event => {
   db = event.target.result;
+  loadSettings();
+  applySettings();
   updateConnectionStatus();
   initPage();
   syncOutbox();
@@ -42,11 +54,70 @@ function initPage() {
   }
 
   if (page === "collection") {
+    setupReaderControls();
+
     const search = document.getElementById("search");
     if (search) {
       search.addEventListener("input", loadCollection);
     }
+
     loadCollection();
+  }
+}
+
+function setupReaderControls() {
+  const decrease = document.getElementById("font-decrease");
+  const increase = document.getElementById("font-increase");
+  const family = document.getElementById("font-family");
+  const readingMode = document.getElementById("reading-mode");
+  const readonlyMode = document.getElementById("readonly-mode");
+  const darkTheme = document.getElementById("dark-theme");
+
+  if (decrease) {
+    decrease.addEventListener("click", () => {
+      uiSettings.fontSize = Math.max(14, uiSettings.fontSize - 1);
+      persistAndApplySettings();
+    });
+  }
+
+  if (increase) {
+    increase.addEventListener("click", () => {
+      uiSettings.fontSize = Math.min(30, uiSettings.fontSize + 1);
+      persistAndApplySettings();
+    });
+  }
+
+  if (family) {
+    family.value = uiSettings.fontFamily;
+    family.addEventListener("change", () => {
+      uiSettings.fontFamily = family.value;
+      persistAndApplySettings();
+    });
+  }
+
+  if (readingMode) {
+    readingMode.checked = uiSettings.readingMode;
+    readingMode.addEventListener("change", () => {
+      uiSettings.readingMode = readingMode.checked;
+      persistAndApplySettings();
+    });
+  }
+
+  if (readonlyMode) {
+    readonlyMode.checked = uiSettings.readonlyMode;
+    readonlyMode.addEventListener("change", () => {
+      uiSettings.readonlyMode = readonlyMode.checked;
+      persistAndApplySettings();
+      loadCollection();
+    });
+  }
+
+  if (darkTheme) {
+    darkTheme.checked = uiSettings.darkTheme;
+    darkTheme.addEventListener("change", () => {
+      uiSettings.darkTheme = darkTheme.checked;
+      persistAndApplySettings();
+    });
   }
 }
 
@@ -120,19 +191,18 @@ function renderCollection(container, poems, query) {
 
   if (!poems.length) {
     container.innerHTML = query
-      ? "<p class=\"empty\">Ничего не найдено по вашему запросу.</p>"
-      : "<p class=\"empty\">✨ Пока пусто. Добавьте первое стихотворение на вкладке «Добавить».</p>";
+      ? '<p class="empty">Ничего не найдено по вашему запросу.</p>'
+      : '<p class="empty">✨ Пока пусто. Добавьте первое стихотворение на вкладке «Добавить».</p>';
     return;
   }
 
   poems.forEach(item => {
     const card = document.createElement("article");
     card.className = "poem-card";
-    card.innerHTML = `
-      <div class="card-head">
-        <h3>${escapeHtml(item.title)}</h3>
-      </div>
-      <pre>${escapeHtml(item.poem)}</pre>
+
+    const actionsMarkup = uiSettings.readonlyMode
+      ? ""
+      : `
       <div class="card-actions">
         <button class="secondary" onclick="startEditPoem(${item.id})">Редактировать</button>
         <button class="danger" onclick="deletePoem(${item.id})">Удалить</button>
@@ -150,8 +220,16 @@ function renderCollection(container, poems, query) {
           <button class="primary" type="submit">Сохранить изменения</button>
           <button class="ghost" type="button" onclick="cancelEditPoem(${item.id})">Отмена</button>
         </div>
-      </form>
+      </form>`;
+
+    card.innerHTML = `
+      <div class="card-head">
+        <h3>${escapeHtml(item.title)}</h3>
+      </div>
+      <pre>${escapeHtml(item.poem)}</pre>
+      ${actionsMarkup}
     `;
+
     container.appendChild(card);
   });
 }
@@ -187,12 +265,13 @@ function submitEdit(event, id) {
     return;
   }
 
+  const updatedAt = Date.now();
   const tx = db.transaction([POEMS_STORE, OUTBOX_STORE], "readwrite");
-  tx.objectStore(POEMS_STORE).put({ id, title, poem, updatedAt: Date.now() });
+  tx.objectStore(POEMS_STORE).put({ id, title, poem, updatedAt });
   tx.objectStore(OUTBOX_STORE).add({
     type: "update",
     localId: id,
-    payload: { title, poem, updatedAt: Date.now() },
+    payload: { title, poem, updatedAt },
     createdAt: Date.now()
   });
 
@@ -320,6 +399,41 @@ function updateConnectionStatus() {
   status.textContent = "🟡 Оффлайн: изменения будут отправлены позже";
   status.classList.add("offline");
   status.classList.remove("online");
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem("poetryUiSettings");
+    if (!raw) {
+      return;
+    }
+
+    const parsed = JSON.parse(raw);
+    uiSettings = { ...defaultSettings, ...parsed };
+  } catch {
+    uiSettings = { ...defaultSettings };
+  }
+}
+
+function persistAndApplySettings() {
+  localStorage.setItem("poetryUiSettings", JSON.stringify(uiSettings));
+  applySettings();
+}
+
+function applySettings() {
+  const body = document.body;
+  body.dataset.theme = uiSettings.darkTheme ? "dark" : "light";
+  body.classList.toggle("reading-mode", uiSettings.readingMode);
+  body.classList.toggle("readonly-mode", uiSettings.readonlyMode);
+
+  const familyMap = {
+    system: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif',
+    serif: '"Times New Roman", Georgia, serif',
+    mono: '"SF Mono", Menlo, Consolas, monospace'
+  };
+
+  body.style.setProperty("--reader-font-size", `${uiSettings.fontSize}px`);
+  body.style.setProperty("--reader-font-family", familyMap[uiSettings.fontFamily] || familyMap.system);
 }
 
 function escapeHtml(value) {

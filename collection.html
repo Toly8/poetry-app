@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#6c63ff">
+<title>Мои стихи — Коллекция</title>
+</head>
+<body data-page="collection" data-theme="light">
+  <main class="app-shell">
+    <header class="app-header">
+      <p class="eyebrow">Poetry App</p>
+      <h1>Моя коллекция</h1>
+      <p id="status" class="status" aria-live="polite"></p>
+      <nav class="tabs" aria-label="Навигация">
+        <a class="tab" href="index.html">Добавить</a>
+        <a class="tab active" href="collection.html">Коллекция</a>
+        <a class="tab" href="reader.html">Чтение</a>
+      </nav>
+    </header>
+
+    <section class="library">
+      <label class="input-group">
+        <span>Поиск по названию, автору и тексту</span>
+        <input id="search" placeholder="Введите слово или фразу">
+      </label>
+      <p class="helper">Нажмите на карточку, чтобы открыть стихотворение на весь экран.</p>
+      <div id="poems"></div>
+    </section>
+  </main>
+
+  <aside id="reader-overlay" class="reader-overlay hidden" aria-hidden="true">
+    <article id="reader-sheet" class="reader-sheet">
+      <header id="reader-top" class="reader-top">
+        <h2 id="reader-title"></h2>
+        <p id="reader-author" class="poem-author"></p>
+        <button id="reader-close" class="ghost" type="button" disabled>Свернуть</button>
+      </header>
+      <div id="reader-content" class="reader-content"></div>
+    </article>
+  </aside>
+
+<script src="app.js"></script>
+</body>
+</html>
